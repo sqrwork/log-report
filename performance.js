@@ -1,5 +1,4 @@
-import axios from "axios";
-
+import reportApi from './log.config'
 
 window.onload = function () {
   setTimeout(function () {
@@ -13,11 +12,10 @@ window.onload = function () {
     let onload=t.loadEventEnd - t.navigationStart  //onload时间
     let jsMemory=(performance.memory.usedJSHeapSize / performance.memory.totalJSHeapSize * 100).toFixed(2) + '%'  //js内存使用占比
     
-
-    axios.post('http://127.0.0.1:3000/error/add', { dns,tcp,request,dom,whiteScreen,domReady,onload,jsMemory }).then(res => {
+    const params={dns,tcp,request,dom,whiteScreen,domReady,onload,jsMemory}
+    reportApi.allLogs(params).then(res=>{
       console.log(res)
     })
-    // console.log(dns,tcp,request,dom,whiteScreen,domReady,onload,jsMemory)
     
   })
 }

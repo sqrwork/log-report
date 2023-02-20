@@ -1,21 +1,8 @@
 import Vue from 'vue'
 import { nowDate } from './date'
-import axios from "axios";
 import './performance'
 import router from '@/router/index'
-import { REPORT_URL } from './log.config'
-
-// 创建一个子线程
-// const worker = new Worker('worker.js')
-// // 接收子线程发来的消息
-// worker.onmessage = e => {
-//     console.log('主线程接收到：', e.data)
-//     worker.terminate();
-// }
-
-
-// // 向子线程发消息
-// worker.postMessage('子线程，你真帅！')
+import reportApi from './log.config'
 
 
 //判断系统
@@ -35,7 +22,6 @@ function myOS() {
     return "other";
   }
 }
-console.log('我是' + myOS());
 
 // js运行异常
 window.onerror = function (message, file, line, col, error) {
@@ -45,7 +31,7 @@ window.onerror = function (message, file, line, col, error) {
   // col：发生错误的列号（数字）
   // error：Error对象（对象）
   console.log("捕获到异常：", { message, file, line, col, error });
-  const errorParams = {    				// 错误代码
+  const jsErr = {    				// 错误代码
     msg: message,	  				// 错误内容
     router: router.currentRoute.fullPath,				// 错误路由地址（根据hash地址‘/#/’切割而来，具体看需求）
     file: error.stack,					// 错误的文件（不一定有）
@@ -53,11 +39,9 @@ window.onerror = function (message, file, line, col, error) {
     type: "jserror",			// 错误的类型
     device: myOS()
   }
-  console.log('errorParams', errorParams)
-  axios.post(REPORT_URL, { errParams: JSON.stringify(errorParams) }).then(res => {
+  reportApi.allLogs({jsErr:JSON.stringify(jsErr),time: nowDate(),}).then(res=>{
     console.log(res)
   })
-  saveLog(errorParams)
 };
 
 
@@ -65,7 +49,14 @@ window.onerror = function (message, file, line, col, error) {
 //监听鼠标点击事件
 window.addEventListener('mouseup', (event) => {
   // console.log(event)
-  axios.post(REPORT_URL, { mouseUp: event.srcElement.outerHTML, userAgent: navigator.userAgent }).then(res => {
+  // axios.post(REPORT_URL, { mouseUp: event.srcElement.outerHTML, userAgent: navigator.userAgent }).then(res => {
+  //   console.log(res)
+  // })
+  const params={
+    time: nowDate(),
+    mouseUp: event.srcElement.outerHTML
+  }
+  reportApi.allLogs(params).then(res=>{
     console.log(res)
   })
 
@@ -78,9 +69,13 @@ Vue.config.errorHandler = function (err, vm, info) {
     message, // 异常信息        
     stack // 异常堆栈信息    
   } = err;
-  const params={message,stack}
-  console.log('error',message,stack)
-  axios.post(REPORT_URL, { warn:JSON.stringify(params) }).then(res => {
+  // const params = { message, stack }
+  console.log('error', message, stack)
+  // axios.post(REPORT_URL, { warn: JSON.stringify(params) }).then(res => {
+  //   console.log(res)
+  // })
+  const params = { warn: JSON.stringify(message, stack),time: nowDate(), }
+  reportApi.allLogs(params).then(res=>{
     console.log(res)
   })
 }
@@ -88,24 +83,33 @@ Vue.config.errorHandler = function (err, vm, info) {
 // 捕获promise报错
 window.addEventListener("unhandledrejection", function (e) {
   e.preventDefault();
-  console.log('e', e)
   console.log("promise 错误,错误的原因是", e.reason);
   console.log("Promise 对象是", e.promise);
   if (e.reason) {
-    axios.post(REPORT_URL, { time: nowDate(), err: e.reason }).then(res => {
-      // console.log(res)
+    // axios.post(REPORT_URL, { time: nowDate(), err: e.reason }).then(res => {
+    //   // console.log(res)
+    // })
+    const params={
+      time: nowDate(),
+      promise:JSON.stringify(e.reaseon,e.promise)
+    }
+    reportApi.allLogs(params).then(res=>{
+      console.log(res)
     })
   }
-
   return true;
-
 });
 
 
 // 监听报错信息 比window.onerror先执行
 window.addEventListener("error", (error) => {
   if (error.message) {
-    axios.post(REPORT_URL, { time: nowDate(), jsmsg: error.message, jsfile: error.filename }).then(res => {
+    const params={
+      time: nowDate(),
+      jsmsg: error.message,
+      jsfile: error.filename
+    }
+    reportApi.allLogs(params).then(res=>{
       console.log(res)
     })
   }
@@ -114,19 +118,8 @@ window.addEventListener("error", (error) => {
   // error.filename：错误的文件
 })
 
-
-// try{
-//   console.log('try')
-// } catch(e) {
-//   console.log('error',e)
-// } 
-// finally {
-//   throw new Error('抛出错误')
-//   console.log('finally')
-// }
-
+// 页面停留时长
 let timeStr
-
 // 对原函数做一个拓展
 let rewriteHis = function (type) {
   let origin = window.history[type] // 先将原函数存放起来
@@ -140,50 +133,32 @@ let rewriteHis = function (type) {
 }
 
 window.history.pushState = rewriteHis('pushState') // 覆盖原来的pushState方法
-// window.history.replaceState = rewriteHis('replaceState') // 覆盖原来的replaceState方法
 
 // 监听自定义事件， pushstate事件是在rewriteHis时注册的，不是原生事件
-// 当点击router-link 或者 window.history.pushState 或者 this.$router.push 时都会被该事件监听到
 window.addEventListener('pushstate', () => {
   let t = new Date().getTime() - timeStr
   timeStr = new Date().getTime()
   console.log('待了时长pushstate：' + t)
-  axios.post(REPORT_URL, { stayTime: t }).then(res => {
+  const params={
+    stayTime: t
+  }
+  reportApi.allLogs(params).then(res=>{
     console.log(res)
   })
 })
 
-// 将错误日志存储在本地
-
-// 错误日志排序
-const sortArray = (allData) => {
-  allData.sort((a, b) => {
-    if (a.createTime > b.createTime) {
-      return 1
+//用户跳转
+router.afterEach((to, from) => {
+  console.log('to,from',to.path,from.path)
+  if (to.path && from.path) {
+    const params={
+      toPage: to.path,
+      fromPage: from.path,
+      time: nowDate()
     }
-    return -1
-  })
-}
-const saveLog = (errorParams) => {
-  const nowData = localStorage.getItem('ERROR')
-  if (nowData) {
-    const allData = JSON.parse(nowData)
-    sortArray(allData)
-    // 只存50条错误信息
-    if (allData.length > 50) {
-      // 已存50条
-      allData[0] = errorParams
-      sortArray(allData)
-    } else {
-      allData.push(errorParams)
-    }
-    localStorage.setItem('ERROR', JSON.stringify(allData))
-  } else {
-    localStorage.setItem('ERROR', JSON.stringify([errorParams]))
+    reportApi.allLogs(params).then(res=>{
+      console.log(res)
+    })
   }
-}
-const a = 1
-window.localStorage.setItem("user", JSON.stringify(a))
-window.localStorage.setItem("user1", 2)
-
+})
 
