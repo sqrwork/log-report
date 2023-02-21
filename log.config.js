@@ -16,8 +16,8 @@ const reportAxios={
       url: url,
       data: params,
       headers: {
-        "Machine-Id": navigator.userAgent,
-        "App-Id":"wims_fdddcs"
+        "Machine-Id": navigator.userAgent,  // 设备标识
+        "App-Id":"wims_fdddcs"  // 应用标识(事业部名称_项目名称)
       },
     });
   },

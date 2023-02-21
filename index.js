@@ -25,16 +25,10 @@ function myOS() {
 
 // js运行异常
 window.onerror = function (message, file, line, col, error) {
-  // message：错误信息（字符串）。
-  // file：发生错误的脚本URL（字符串）
-  // line：发生错误的行号（数字）
-  // col：发生错误的列号（数字）
-  // error：Error对象（对象）
-  console.log("捕获到异常：", { message, file, line, col, error });
-  const jsErr = {    				// 错误代码
-    msg: message,	  				// 错误内容
-    router: router.currentRoute.fullPath,				// 错误路由地址（根据hash地址‘/#/’切割而来，具体看需求）
-    file: error.stack,					// 错误的文件（不一定有）
+  const jsErr = {    		// 错误代码
+    msg: message,	  		// 错误内容
+    router: router.currentRoute.fullPath,	// 错误路由地址
+    file: error.stack,					// 错误的文件
     createTime: nowDate(),			// 发现错误的时间
     type: "jserror",			// 错误的类型
     device: myOS()
@@ -48,10 +42,6 @@ window.onerror = function (message, file, line, col, error) {
 
 //监听鼠标点击事件
 window.addEventListener('mouseup', (event) => {
-  // console.log(event)
-  // axios.post(REPORT_URL, { mouseUp: event.srcElement.outerHTML, userAgent: navigator.userAgent }).then(res => {
-  //   console.log(res)
-  // })
   const params={
     time: nowDate(),
     mouseUp: event.srcElement.outerHTML
@@ -69,13 +59,12 @@ Vue.config.errorHandler = function (err, vm, info) {
     message, // 异常信息        
     stack // 异常堆栈信息    
   } = err;
-  // const params = { message, stack }
+  const params = { message, stack }
   console.log('error', message, stack)
   // axios.post(REPORT_URL, { warn: JSON.stringify(params) }).then(res => {
   //   console.log(res)
   // })
-  const params = { warn: JSON.stringify(message, stack),time: nowDate(), }
-  reportApi.allLogs(params).then(res=>{
+  reportApi.allLogs({warn: JSON.stringify(params),time: nowDate()}).then(res=>{
     console.log(res)
   })
 }
@@ -86,14 +75,7 @@ window.addEventListener("unhandledrejection", function (e) {
   console.log("promise 错误,错误的原因是", e.reason);
   console.log("Promise 对象是", e.promise);
   if (e.reason) {
-    // axios.post(REPORT_URL, { time: nowDate(), err: e.reason }).then(res => {
-    //   // console.log(res)
-    // })
-    const params={
-      time: nowDate(),
-      promise:JSON.stringify(e.reaseon,e.promise)
-    }
-    reportApi.allLogs(params).then(res=>{
+    reportApi.allLogs({time: nowDate(),promise:e.reason}).then(res=>{
       console.log(res)
     })
   }
@@ -120,13 +102,12 @@ window.addEventListener("error", (error) => {
 
 // 页面停留时长
 let timeStr
-// 对原函数做一个拓展
 let rewriteHis = function (type) {
-  let origin = window.history[type] // 先将原函数存放起来
-  return function () { // 当window.history[type]函数被执行时，这个函数就会被执行
-    let rs = origin.apply(this, arguments) // 执行原函数
-    let e = new Event(type.toLocaleLowerCase()) // 定义一个自定义事件
-    e.arguments = arguments // 把默认参数，绑定到自定义事件上，new Event返回的结果，自身上没有arguments的
+  let origin = window.history[type]
+  return function () { 
+    let rs = origin.apply(this, arguments)
+    let e = new Event(type.toLocaleLowerCase())
+    e.arguments = argumentsarguments的
     window.dispatchEvent(e) // 触发自定义事件，把载荷传给自定义事件
     return rs
   }
